@@ -19,6 +19,6 @@ urlpatterns = [
     path(
         r"applic/<int:applic_id>/service/<int:service_id>",
         views.RemoveServiceFromApplicationView.as_view(),
-        name="Remove-Service-From-Applic",
+        name="remove-service-from-applic",
     ),
 ]
