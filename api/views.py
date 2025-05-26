@@ -5,7 +5,13 @@ from rest_framework.response import Response
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
 
-from api.models import Application, ApplicationStatus, Service, ServiceSpecification
+from api.models import (
+    Application,
+    ApplicationService,
+    ApplicationStatus,
+    Service,
+    ServiceSpecification,
+)
 from api.serializers import (
     ApplicationSerializer,
     ServiceDetailSerializer,
@@ -332,6 +338,41 @@ class ApplicationDetail(APIView):
                     "detail": "The application has been successfully marked as deleted",
                 },
                 status=status.HTTP_200_OK,
+            )
+
+        except Exception as e:
+            return Response(
+                {"status": "error", "detail": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+
+class RemoveServiceFromApplicationView(APIView):
+    from rest_framework.views import APIView
+
+
+from rest_framework.response import Response
+from rest_framework import status
+from django.shortcuts import get_object_or_404
+
+
+class RemoveServiceFromApplicationView(APIView):
+    def delete(self, request, applic_id, service_id, format=None):
+        try:
+            app_service = get_object_or_404(
+                ApplicationService.objects.select_related("application", "service"),
+                application_id=applic_id,
+                service_id=service_id,
+            )
+
+            app_service.delete()
+
+            return Response(
+                {
+                    "status": "success",
+                    "detail": "The service was successfully removed from the application.",
+                },
+                status=status.HTTP_204_NO_CONTENT,
             )
 
         except Exception as e:
