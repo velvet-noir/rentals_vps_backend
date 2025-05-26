@@ -20,21 +20,6 @@ from api.serializers import (
 )
 
 
-# from django.shortcuts import render
-# import requests
-
-# def service_view(request):
-#     url = request.build_absolute_uri('/services/8/')
-#     response = requests.get(url)
-#     if response.status_code == 200:
-#         data = response.json()
-#         service = data['data']
-#     else:
-#         service = None
-
-#     return render(request, 'service_detail.html', {'service': service})
-
-
 class ServiceList(APIView):
     model_class = Service
     serializer_class = ServiceSerializer

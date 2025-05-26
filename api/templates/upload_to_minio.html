@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8" />
+    <title>Загрузка файла в MinIO</title>
+</head>
+<body>
+    <h1>Загрузить изображение в MinIO</h1>
+
+    <form id="uploadForm" method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <input type="file" name="file" id="fileInput" accept="image/*" required />
+        <button type="submit">Загрузить</button>
+    </form>
+
+    <div id="result" style="margin-top:20px;"></div>
+
+    <script>
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let cookie of cookies) {
+                    cookie = cookie.trim();
+                    if (cookie.startsWith(name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+        const csrftoken = getCookie('csrftoken');
+
+        const form = document.getElementById('uploadForm');
+        const fileInput = document.getElementById('fileInput');
+        const resultDiv = document.getElementById('result');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            if (!fileInput.files.length) {
+                alert('Пожалуйста, выберите файл');
+                return;
+            }
+
+            const file = fileInput.files[0];
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch('/api/upload-to-minio/', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': csrftoken
+                    },
+                    body: formData,
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    resultDiv.innerHTML = `<span style="color:red;">Ошибка: ${errorData.detail || 'Неизвестная ошибка'}</span>`;
+                    return;
+                }
+
+                const data = await response.json();
+                if (data.status === 'success') {
+                    resultDiv.innerHTML = `
+                        <p>Файл успешно загружен!</p>
+                        <p>URL: <a href="${data.url}" target="_blank">${data.url}</a></p>
+                        <img src="${data.url}" alt="Uploaded image" style="max-width:300px; margin-top:10px;" />
+                    `;
+                } else {
+                    resultDiv.innerHTML = `<span style="color:red;">Ошибка: ${data.error || 'Неизвестная ошибка'}</span>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<span style="color:red;">Ошибка запроса: ${error.message}</span>`;
+            }
+        });
+    </script>
+</body>
+</html>
