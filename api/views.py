@@ -5,8 +5,12 @@ from rest_framework.response import Response
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
 
-from api.models import Service
-from api.serializers import ServiceDetailSerializer, ServiceSerializer
+from api.models import Service, ServiceSpecification
+from api.serializers import (
+    ServiceDetailSerializer,
+    ServiceSerializer,
+    ServiceSpecSerializer,
+)
 
 
 class ServiceList(APIView):
@@ -114,3 +118,73 @@ class ServiceDetail(APIView):
                 {"detail": "Internal server error"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
+
+
+class ServiceSpecList(APIView):
+    model_class = ServiceSpecification
+    serializer_class = ServiceSpecSerializer
+
+    def get(self, request, format=None):
+        try:
+            specs = self.model_class.objects.all().select_related("service")
+
+            serializer = self.serializer_class(specs, many=True)
+
+            return Response(
+                {
+                    "status": "success",
+                    "data": serializer.data,
+                },
+                status=status.HTTP_200_OK,
+            )
+
+        except Exception as e:
+            return Response(
+                {
+                    "status": "error",
+                    "detail": str(e),
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+    def post(self, request, format=None):
+        try:
+            serializer = self.serializer_class(data=request.data)
+
+            if not serializer.is_valid():
+                return Response(
+                    {
+                        "status": "error",
+                        "errors": serializer.errors,
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            serializer.save()
+
+            return Response(
+                {
+                    "status": "success",
+                    "data": serializer.data,
+                },
+                status=status.HTTP_201_CREATED,
+            )
+
+        except Exception as e:
+            return Response(
+                {
+                    "status": "error",
+                    "detail": str(e),
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+
+class ServiceSpecDetail(APIView):
+    model_class = ServiceSpecification
+    serializer_class = ServiceSpecSerializer
+
+    def get(self, request, pk, format=None):
+        service = get_object_or_404(self.model_class, pk=pk)
+        serializer = self.serializer_class(service)
+        return Response(serializer.data)
