@@ -25,7 +25,15 @@ class ServiceDetailSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Service
-        fields = ["pk", "name", "image", "mini_description", "price", "specifications"]
+        fields = [
+            "pk",
+            "name",
+            "image",
+            "mini_description",
+            "price",
+            "is_active",
+            "specifications",
+        ]
 
 
 class ApplicationStatusSerializer(serializers.ModelSerializer):
