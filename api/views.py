@@ -53,7 +53,7 @@ class ServiceList(APIView):
 
         except Exception as e:
             return Response(
-                {"status": "error", "message": str(e)},
+                {"status": "error", "mesdetailsage": str(e)},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
@@ -72,7 +72,7 @@ class ServiceDetail(APIView):
             )
         except Exception as e:
             return Response(
-                {"status": "error", "message": str(e)},
+                {"status": "error", "detail": str(e)},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
@@ -95,7 +95,7 @@ class ServiceDetail(APIView):
 
         except Exception as e:
             return Response(
-                {"status": "error", "message": "Internal server error"},
+                {"status": "error", "detail": "Internal server error"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
@@ -153,29 +153,20 @@ class ServiceSpecList(APIView):
 
             if not serializer.is_valid():
                 return Response(
-                    {
-                        "status": "error",
-                        "errors": serializer.errors,
-                    },
+                    {"status": "error", "errors": serializer.errors},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
             serializer.save()
 
             return Response(
-                {
-                    "status": "success",
-                    "data": serializer.data,
-                },
+                {"status": "success", "data": serializer.data},
                 status=status.HTTP_201_CREATED,
             )
 
         except Exception as e:
             return Response(
-                {
-                    "status": "error",
-                    "detail": str(e),
-                },
+                {"status": "error", "detail": str(e)},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
@@ -185,6 +176,56 @@ class ServiceSpecDetail(APIView):
     serializer_class = ServiceSpecSerializer
 
     def get(self, request, pk, format=None):
-        service = get_object_or_404(self.model_class, pk=pk)
-        serializer = self.serializer_class(service)
-        return Response(serializer.data)
+        try:
+            spec = get_object_or_404(self.model_class, pk=pk)
+            serializer = self.serializer_class(spec)
+            return Response(
+                {"status": "success", "data": serializer.data},
+                status=status.HTTP_200_OK,
+            )
+        except Exception as e:
+            return Response(
+                {"status": "error", "detail": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+    def patch(self, request, pk, format=None):
+        try:
+            spec = get_object_or_404(self.model_class, pk=pk)
+            serializer = self.serializer_class(spec, data=request.data, partial=True)
+
+            if not serializer.is_valid():
+                return Response(
+                    {"status": "error", "errors": serializer.errors},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            serializer.save()
+            return Response(
+                {"status": "success", "data": serializer.data},
+                status=status.HTTP_200_OK,
+            )
+
+        except Exception as e:
+            return Response(
+                {"status": "error", "detail": "Internal server error"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+        
+    def delete(self, request, pk, format=None):
+        try:
+            spec = get_object_or_404(self.model_class, pk=pk)
+            spec.delete()
+
+            return Response(
+                status=status.HTTP_204_NO_CONTENT
+            )
+
+        except Exception as e:
+            return Response(
+                {
+                    "status": "error",
+                    "detail": f"Failed to delete specification: {str(e)}"
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
