@@ -4,7 +4,7 @@ from django.contrib.auth.models import User
 
 class Service(models.Model):
     name = models.CharField(max_length=100)
-    image = models.CharField(max_length=200)
+    image = models.URLField(max_length=1024)
     mini_description = models.TextField()
     price = models.DecimalField(max_digits=10, decimal_places=2)
     is_active = models.BooleanField(default=True)
