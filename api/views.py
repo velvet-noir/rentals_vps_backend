@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
 
-from api.models import Application, Service, ServiceSpecification
+from api.models import Application, ApplicationStatus, Service, ServiceSpecification
 from api.serializers import (
     ApplicationSerializer,
     ServiceDetailSerializer,
@@ -270,6 +270,70 @@ class ApplicationDetail(APIView):
                 {"status": "success", "data": serializer.data},
                 status=status.HTTP_200_OK,
             )
+        except Exception as e:
+            return Response(
+                {"status": "error", "detail": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+    def put(self, request, pk, format=None):
+        try:
+            application = get_object_or_404(
+                self.model_class.objects.select_related("status"), pk=pk
+            )
+
+            if application.status_id == 2:
+                return Response(
+                    {"detail": "The application already has the status of 'Formed'"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            formed_status = get_object_or_404(ApplicationStatus, pk=2)
+            application.status = formed_status
+            application.save()
+
+            serializer = self.serializer_class(application)
+            return Response(
+                {
+                    "status": "success",
+                    "data": serializer.data,
+                    "detail": "The application status has been successfully changed to 'Formed'",
+                },
+                status=status.HTTP_200_OK,
+            )
+
+        except Exception as e:
+            return Response(
+                {"status": "error", "detail": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+    def delete(self, request, pk, format=None):
+        try:
+            application = get_object_or_404(
+                self.model_class.objects.select_related("status"), pk=pk
+            )
+
+            if application.status_id == 5:
+                return Response(
+                    {"detail": "The application has already been marked as deleted"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            deleted_status = get_object_or_404(ApplicationStatus, pk=5)
+            application.status = deleted_status
+            application.save()
+
+            serializer = self.serializer_class(application)
+            return Response(
+                {
+                    "status": "success",
+                    "data": serializer.data,
+                    "detail": "The application has been successfully marked as deleted",
+                },
+                status=status.HTTP_200_OK,
+            )
+
         except Exception as e:
             return Response(
                 {"status": "error", "detail": str(e)},
