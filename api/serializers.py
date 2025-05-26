@@ -52,7 +52,7 @@ class ApplicationSerializer(serializers.ModelSerializer):
             "pk",
             "status",
             "created_at",
-            "update_at",
+            "updated_at",
             "user_creator",
             "user_moderator",
             "services",

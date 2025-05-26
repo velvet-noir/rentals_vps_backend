@@ -10,4 +10,10 @@ urlpatterns = [
         views.ServiceSpecDetail.as_view(),
         name="services-spec-detail",
     ),
+    path(r"applic/", views.ApplicationList.as_view(), name="application-list"),
+    path(
+        r"applic/<int:pk>/",
+        views.ApplicationDetail.as_view(),
+        name="application-detail",
+    ),
 ]

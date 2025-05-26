@@ -5,8 +5,9 @@ from rest_framework.response import Response
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
 
-from api.models import Service, ServiceSpecification
+from api.models import Application, Service, ServiceSpecification
 from api.serializers import (
+    ApplicationSerializer,
     ServiceDetailSerializer,
     ServiceSerializer,
     ServiceSpecSerializer,
@@ -19,7 +20,7 @@ class ServiceList(APIView):
 
     def get(self, request, format=None):
         try:
-            query = request.query_params.get("q", "")
+            query = request.query_params.get("query", "")
             services = self.model_class.objects.filter(is_active=True)
 
             if query:
@@ -211,21 +212,66 @@ class ServiceSpecDetail(APIView):
                 {"status": "error", "detail": "Internal server error"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
-        
+
     def delete(self, request, pk, format=None):
         try:
             spec = get_object_or_404(self.model_class, pk=pk)
             spec.delete()
 
-            return Response(
-                status=status.HTTP_204_NO_CONTENT
-            )
+            return Response(status=status.HTTP_204_NO_CONTENT)
 
         except Exception as e:
             return Response(
                 {
                     "status": "error",
-                    "detail": f"Failed to delete specification: {str(e)}"
+                    "detail": f"Failed to delete specification: {str(e)}",
                 },
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+
+class ApplicationList(APIView):
+    model_class = Application
+    serializer_class = ApplicationSerializer
+
+    def get(self, request, format=None):
+        try:
+            applications = self.model_class.objects.exclude(
+                Q(status__name="draft") | Q(status__name="deleted")
+            ).select_related("status")
+
+            status_id = request.query_params.get("status")
+            if status_id:
+                applications = applications.filter(status__id=status_id)
+
+            serializer = self.serializer_class(applications, many=True)
+
+            return Response(
+                {"status": "success", "data": serializer.data},
+                status=status.HTTP_200_OK,
+            )
+
+        except Exception as e:
+            return Response(
+                {"status": "error", "detail": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+
+class ApplicationDetail(APIView):
+    model_class = Application
+    serializer_class = ApplicationSerializer
+
+    def get(self, request, pk, format=None):
+        try:
+            application = get_object_or_404(self.model_class, pk=pk)
+            serializer = self.serializer_class(application)
+            return Response(
+                {"status": "success", "data": serializer.data},
+                status=status.HTTP_200_OK,
+            )
+        except Exception as e:
+            return Response(
+                {"status": "error", "detail": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
