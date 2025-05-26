@@ -54,7 +54,7 @@ class Application(models.Model):
         ApplicationStatus, on_delete=models.CASCADE, related_name="applications"
     )
     created_at = models.DateTimeField(auto_now_add=True)
-    update_at = models.DateTimeField(auto_now=True)
+    updated_at = models.DateTimeField(auto_now=True)
     user_creator = models.ForeignKey(
         User,
         on_delete=models.SET_NULL,

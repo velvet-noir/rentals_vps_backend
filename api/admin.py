@@ -33,7 +33,7 @@ class ApplicationAdmin(admin.ModelAdmin):
         "id",
         "get_status_name",
         "created_at",
-        "update_at",
+        "updated_at",
         "user_creator",
         "user_moderator",
     )
