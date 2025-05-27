@@ -5,6 +5,9 @@ from rest_framework.response import Response
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
 
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
+
 from api.models import (
     Application,
     ApplicationService,
@@ -24,6 +27,19 @@ class ServiceList(APIView):
     model_class = Service
     serializer_class = ServiceSerializer
 
+    @swagger_auto_schema(
+        operation_summary="Получить список сервисов",
+        operation_description="Возвращает список всех активных сервисов. Можно фильтровать по query параметру.",
+        responses={200: ServiceSerializer(many=True)},
+        manual_parameters=[
+            openapi.Parameter(
+                "query",
+                openapi.IN_QUERY,
+                description="Фильтр по имени или описанию",
+                type=openapi.TYPE_STRING,
+            ),
+        ],
+    )
     def get(self, request, format=None):
         try:
             query = request.query_params.get("query", "")
@@ -42,6 +58,11 @@ class ServiceList(APIView):
                 {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
+    @swagger_auto_schema(
+        operation_summary="Создать новый сервис",
+        request_body=ServiceSerializer,
+        responses={201: ServiceSerializer},
+    )
     def post(self, request, format=None):
         try:
             serializer = self.serializer_class(data=request.data)
@@ -69,6 +90,11 @@ class ServiceDetail(APIView):
     model_class = Service
     serializer_class = ServiceDetailSerializer
 
+    @swagger_auto_schema(
+        operation_summary="Получить детали сервиса",
+        tags=["Сервисы - Детали"],
+        responses={200: ServiceDetailSerializer},
+    )
     def get(self, request, pk, format=None):
         try:
             service = get_object_or_404(self.model_class, pk=pk, is_active=True)
@@ -83,6 +109,11 @@ class ServiceDetail(APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
+    @swagger_auto_schema(
+        operation_summary="Частично обновить сервис",
+        request_body=ServiceDetailSerializer,
+        responses={200: ServiceDetailSerializer},
+    )
     def patch(self, request, pk, format=None):
         try:
             service = get_object_or_404(self.model_class, pk=pk)
@@ -106,6 +137,9 @@ class ServiceDetail(APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
+    @swagger_auto_schema(
+        operation_summary="Удалить сервис (деактивация)", responses={204: "No Content"}
+    )
     def delete(self, request, pk, format=None):
         try:
             service = get_object_or_404(self.model_class, pk=pk)
@@ -131,6 +165,10 @@ class ServiceSpecList(APIView):
     model_class = ServiceSpecification
     serializer_class = ServiceSpecSerializer
 
+    @swagger_auto_schema(
+        operation_summary="Получить список спецификаций сервисов",
+        responses={200: ServiceSpecSerializer(many=True)},
+    )
     def get(self, request, format=None):
         try:
             specs = self.model_class.objects.all().select_related("service")
@@ -154,6 +192,11 @@ class ServiceSpecList(APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
+    @swagger_auto_schema(
+        operation_summary="Создать новую спецификацию сервиса",
+        request_body=ServiceSpecSerializer,
+        responses={201: ServiceSpecSerializer},
+    )
     def post(self, request, format=None):
         try:
             serializer = self.serializer_class(data=request.data)
@@ -182,6 +225,10 @@ class ServiceSpecDetail(APIView):
     model_class = ServiceSpecification
     serializer_class = ServiceSpecSerializer
 
+    @swagger_auto_schema(
+        operation_summary="Получить характеристики услуги",
+        responses={200: ServiceSpecSerializer},
+    )
     def get(self, request, pk, format=None):
         try:
             spec = get_object_or_404(self.model_class, pk=pk)
@@ -196,6 +243,11 @@ class ServiceSpecDetail(APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
+    @swagger_auto_schema(
+        operation_summary="Частично обновить характеристики",
+        request_body=ServiceSpecSerializer,
+        responses={200: ServiceSpecSerializer},
+    )
     def patch(self, request, pk, format=None):
         try:
             spec = get_object_or_404(self.model_class, pk=pk)
@@ -219,6 +271,10 @@ class ServiceSpecDetail(APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
+    swagger_auto_schema(
+        operation_summary="Удалить характеристики", responses={204: "No Content"}
+    )
+
     def delete(self, request, pk, format=None):
         try:
             spec = get_object_or_404(self.model_class, pk=pk)
@@ -240,6 +296,18 @@ class ApplicationList(APIView):
     model_class = Application
     serializer_class = ApplicationSerializer
 
+    @swagger_auto_schema(
+        operation_summary="Получить список заявок",
+        manual_parameters=[
+            openapi.Parameter(
+                "status",
+                openapi.IN_QUERY,
+                description="Фильтр по статусу заявки (ID)",
+                type=openapi.TYPE_INTEGER,
+            )
+        ],
+        responses={200: ApplicationSerializer(many=True)},
+    )
     def get(self, request, format=None):
         try:
             applications = self.model_class.objects.exclude(
@@ -268,6 +336,10 @@ class ApplicationDetail(APIView):
     model_class = Application
     serializer_class = ApplicationSerializer
 
+    @swagger_auto_schema(
+        operation_summary="Получить детали заявки",
+        responses={200: ApplicationSerializer},
+    )
     def get(self, request, pk, format=None):
         try:
             application = get_object_or_404(self.model_class, pk=pk)
@@ -282,6 +354,10 @@ class ApplicationDetail(APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
+    @swagger_auto_schema(
+        operation_summary="Сменить статус заявки на 'Сформирована'",
+        responses={200: ApplicationSerializer},
+    )
     def put(self, request, pk, format=None):
         try:
             application = get_object_or_404(
@@ -314,6 +390,10 @@ class ApplicationDetail(APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
+    @swagger_auto_schema(
+        operation_summary="Сменить статус заявки на 'Удалена'",
+        responses={200: ApplicationSerializer},
+    )
     def delete(self, request, pk, format=None):
         try:
             application = get_object_or_404(
@@ -348,10 +428,9 @@ class ApplicationDetail(APIView):
 
 
 class RemoveServiceFromApplicationView(APIView):
-    from rest_framework.views import APIView
-
-
-class RemoveServiceFromApplicationView(APIView):
+    @swagger_auto_schema(
+        operation_summary="Удалить сервис из заявки", responses={204: "No Content"}
+    )
     def delete(self, request, applic_id, service_id, format=None):
         try:
             app_service = get_object_or_404(
