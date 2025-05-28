@@ -22,14 +22,24 @@ from api.serializers import (
     ServiceSpecSerializer,
 )
 
+# @swagger_auto_schema(
+#     manual_parameters=None,  # Список openapi.Parameter для описания query/path/header/cookie
+#     operation_id=None,  # Идентификатор операции (для генерации кода)
+#     operation_description=None,  # Полное описание операции
+#     deprecated=None,  # Отметка, что эндпоинт устарел
+#     security=None,  # Настройка безопасности (например, JWT)
+#     tags=None,  # Список тегов (разделы в Swagger UI)
+#     responses=None,  # Словарь с кодами ответов и их описаниями/сериализаторами
+#     examples=None,  # Примеры запросов/ответов
+# )
+
 
 class ServiceList(APIView):
     model_class = Service
     serializer_class = ServiceSerializer
 
     @swagger_auto_schema(
-        operation_summary="Получить список сервисов",
-        operation_description="Возвращает список всех активных сервисов. Можно фильтровать по query параметру.",
+        operation_summary="Получить список всех услуг",
         responses={200: ServiceSerializer(many=True)},
         manual_parameters=[
             openapi.Parameter(
@@ -39,6 +49,7 @@ class ServiceList(APIView):
                 type=openapi.TYPE_STRING,
             ),
         ],
+        tags=["services/"],
     )
     def get(self, request, format=None):
         try:
@@ -59,9 +70,10 @@ class ServiceList(APIView):
             )
 
     @swagger_auto_schema(
-        operation_summary="Создать новый сервис",
+        operation_summary="Создать новую услугу",
         request_body=ServiceSerializer,
         responses={201: ServiceSerializer},
+        tags=["services/"],
     )
     def post(self, request, format=None):
         try:
@@ -91,9 +103,9 @@ class ServiceDetail(APIView):
     serializer_class = ServiceDetailSerializer
 
     @swagger_auto_schema(
-        operation_summary="Получить детали сервиса",
-        tags=["Сервисы - Детали"],
+        operation_summary="Получить одну услугу по ID с характеристиками",
         responses={200: ServiceDetailSerializer},
+        tags=["services/{id}/"],
     )
     def get(self, request, pk, format=None):
         try:
@@ -110,9 +122,10 @@ class ServiceDetail(APIView):
             )
 
     @swagger_auto_schema(
-        operation_summary="Частично обновить сервис",
+        operation_summary="Обновить одну услугу по ID",
         request_body=ServiceDetailSerializer,
         responses={200: ServiceDetailSerializer},
+        tags=["services/{id}/"],
     )
     def patch(self, request, pk, format=None):
         try:
@@ -138,7 +151,9 @@ class ServiceDetail(APIView):
             )
 
     @swagger_auto_schema(
-        operation_summary="Удалить сервис (деактивация)", responses={204: "No Content"}
+        operation_summary="Удалить(через статус) одну услугу по ID",
+        responses={204: "No Content"},
+        tags=["services/{id}/"],
     )
     def delete(self, request, pk, format=None):
         try:
@@ -166,8 +181,9 @@ class ServiceSpecList(APIView):
     serializer_class = ServiceSpecSerializer
 
     @swagger_auto_schema(
-        operation_summary="Получить список спецификаций сервисов",
+        operation_summary="Получить список всех характеристик",
         responses={200: ServiceSpecSerializer(many=True)},
+        tags=["spec/"],
     )
     def get(self, request, format=None):
         try:
@@ -193,9 +209,10 @@ class ServiceSpecList(APIView):
             )
 
     @swagger_auto_schema(
-        operation_summary="Создать новую спецификацию сервиса",
+        operation_summary="Добавить новую характеристику",
         request_body=ServiceSpecSerializer,
         responses={201: ServiceSpecSerializer},
+        tags=["spec/"],
     )
     def post(self, request, format=None):
         try:
@@ -226,8 +243,9 @@ class ServiceSpecDetail(APIView):
     serializer_class = ServiceSpecSerializer
 
     @swagger_auto_schema(
-        operation_summary="Получить характеристики услуги",
+        operation_summary="Получить характеристику по ID",
         responses={200: ServiceSpecSerializer},
+        tags=["spec/{id}/"],
     )
     def get(self, request, pk, format=None):
         try:
@@ -244,9 +262,10 @@ class ServiceSpecDetail(APIView):
             )
 
     @swagger_auto_schema(
-        operation_summary="Частично обновить характеристики",
+        operation_summary="Обновить характеристику по ID",
         request_body=ServiceSpecSerializer,
         responses={200: ServiceSpecSerializer},
+        tags=["spec/{id}/"],
     )
     def patch(self, request, pk, format=None):
         try:
@@ -271,10 +290,11 @@ class ServiceSpecDetail(APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
-    swagger_auto_schema(
-        operation_summary="Удалить характеристики", responses={204: "No Content"}
+    @swagger_auto_schema(
+        operation_summary="Удалить характеристику по ID",
+        responses={204: "No Content"},
+        tags=["spec/{id}/"],
     )
-
     def delete(self, request, pk, format=None):
         try:
             spec = get_object_or_404(self.model_class, pk=pk)
@@ -297,16 +317,17 @@ class ApplicationList(APIView):
     serializer_class = ApplicationSerializer
 
     @swagger_auto_schema(
-        operation_summary="Получить список заявок",
+        operation_summary="Получить список всех заявок",
         manual_parameters=[
             openapi.Parameter(
                 "status",
                 openapi.IN_QUERY,
-                description="Фильтр по статусу заявки (ID)",
-                type=openapi.TYPE_INTEGER,
-            )
+                description="Фильтр по имени статуса заявки",
+                type=openapi.TYPE_STRING,
+            ),
         ],
         responses={200: ApplicationSerializer(many=True)},
+        tags=["applic/"],
     )
     def get(self, request, format=None):
         try:
@@ -314,9 +335,9 @@ class ApplicationList(APIView):
                 Q(status__name="draft") | Q(status__name="deleted")
             ).select_related("status")
 
-            status_id = request.query_params.get("status")
-            if status_id:
-                applications = applications.filter(status__id=status_id)
+            status_name = request.query_params.get("status")
+            if status_name:
+                applications = applications.filter(status__name=status_name)
 
             serializer = self.serializer_class(applications, many=True)
 
@@ -337,8 +358,9 @@ class ApplicationDetail(APIView):
     serializer_class = ApplicationSerializer
 
     @swagger_auto_schema(
-        operation_summary="Получить детали заявки",
+        operation_summary="Получить одну заявку по ID",
         responses={200: ApplicationSerializer},
+        tags=["applic/{id}/"],
     )
     def get(self, request, pk, format=None):
         try:
@@ -355,8 +377,9 @@ class ApplicationDetail(APIView):
             )
 
     @swagger_auto_schema(
-        operation_summary="Сменить статус заявки на 'Сформирована'",
+        operation_summary="Установить для заявки статус 'formed(сформирована)'",
         responses={200: ApplicationSerializer},
+        tags=["applic/{id}/"],
     )
     def put(self, request, pk, format=None):
         try:
@@ -391,8 +414,9 @@ class ApplicationDetail(APIView):
             )
 
     @swagger_auto_schema(
-        operation_summary="Сменить статус заявки на 'Удалена'",
+        operation_summary="Удалить заявку через смену статсуса на 'deleted(удалена)'",
         responses={200: ApplicationSerializer},
+        tags=["applic/{id}/"],
     )
     def delete(self, request, pk, format=None):
         try:
@@ -429,7 +453,9 @@ class ApplicationDetail(APIView):
 
 class RemoveServiceFromApplicationView(APIView):
     @swagger_auto_schema(
-        operation_summary="Удалить сервис из заявки", responses={204: "No Content"}
+        operation_summary="Удаление сервиса по ID из заявки",
+        responses={204: "No Content"},
+        tags=["applic/{applic_id}/service/{service_id}"],
     )
     def delete(self, request, applic_id, service_id, format=None):
         try:
