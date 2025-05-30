@@ -5,7 +5,6 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.permissions import AllowAny
 
 
-
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from django.contrib.auth.models import User
@@ -31,9 +30,18 @@ from api.serializers import (
 )
 
 
+def is_moderator(user):
+    return user.is_authenticated and user.is_staff and not user.is_superuser
+
+def is_superuser(user):
+    return user.is_authenticated and user.is_superuser
+
+
 class ServiceList(APIView):
     model_class = Service
     serializer_class = ServiceSerializer
+
+    permission_classes = [AllowAny]
 
     @swagger_auto_schema(
         operation_summary="Получить список всех услуг",
@@ -73,31 +81,25 @@ class ServiceList(APIView):
         tags=["services/"],
     )
     def post(self, request, format=None):
+        user = request.user
+        if not (is_moderator(user) or is_superuser(user)):
+            return Response({"detail": "Permission denied"}, status=status.HTTP_403_FORBIDDEN)
+
         try:
             serializer = self.serializer_class(data=request.data)
-
             if not serializer.is_valid():
-                return Response(
-                    {"status": "error", "errors": serializer.errors},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-
+                return Response({"status": "error", "errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
             serializer.save()
-            return Response(
-                {"status": "success", "data": serializer.data},
-                status=status.HTTP_201_CREATED,
-            )
-
+            return Response({"status": "success", "data": serializer.data}, status=status.HTTP_201_CREATED)
         except Exception as e:
-            return Response(
-                {"status": "error", "mesdetailsage": str(e)},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
+            return Response({"status": "error", "message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class ServiceDetail(APIView):
     model_class = Service
     serializer_class = ServiceDetailSerializer
+
+    permission_classes = [AllowAny]
 
     @swagger_auto_schema(
         operation_summary="Получить одну услугу по ID с характеристиками",
@@ -125,27 +127,19 @@ class ServiceDetail(APIView):
         tags=["services/{id}/"],
     )
     def patch(self, request, pk, format=None):
+        user = request.user
+        if not (is_moderator(user) or is_superuser(user)):
+            return Response({"detail": "Permission denied"}, status=status.HTTP_403_FORBIDDEN)
+
         try:
             service = get_object_or_404(self.model_class, pk=pk)
             serializer = self.serializer_class(service, data=request.data, partial=True)
-
             if not serializer.is_valid():
-                return Response(
-                    {"status": "error", "errors": serializer.errors},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-
+                return Response({"status": "error", "errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
             serializer.save()
-            return Response(
-                {"status": "success", "data": serializer.data},
-                status=status.HTTP_200_OK,
-            )
-
-        except Exception as e:
-            return Response(
-                {"status": "error", "detail": "Internal server error"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
+            return Response({"status": "success", "data": serializer.data}, status=status.HTTP_200_OK)
+        except Exception:
+            return Response({"status": "error", "detail": "Internal server error"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     @swagger_auto_schema(
         operation_summary="Удалить(через статус) одну услугу по ID",
@@ -153,29 +147,28 @@ class ServiceDetail(APIView):
         tags=["services/{id}/"],
     )
     def delete(self, request, pk, format=None):
+        user = request.user
+        if not (is_moderator(user) or is_superuser(user)):
+            return Response({"detail": "Permission denied"}, status=status.HTTP_403_FORBIDDEN)
+
         try:
             service = get_object_or_404(self.model_class, pk=pk)
-
             if not service.is_active:
-                return Response(
-                    {"detail": "Service already deleted"}, status=status.HTTP_410_GONE
-                )
+                return Response({"detail": "Service already deleted"}, status=status.HTTP_410_GONE)
 
             service.is_active = False
             service.save()
 
             return Response(status=status.HTTP_204_NO_CONTENT)
-
-        except Exception as e:
-            return Response(
-                {"detail": "Internal server error"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
+        except Exception:
+            return Response({"detail": "Internal server error"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class ServiceSpecList(APIView):
     model_class = ServiceSpecification
     serializer_class = ServiceSpecSerializer
+
+    permission_classes = [AllowAny]
 
     @swagger_auto_schema(
         operation_summary="Получить список всех характеристик",
@@ -212,32 +205,25 @@ class ServiceSpecList(APIView):
         tags=["spec/"],
     )
     def post(self, request, format=None):
+        user = request.user
+        if not (is_moderator(user) or is_superuser(user)):
+            return Response({"detail": "Permission denied"}, status=status.HTTP_403_FORBIDDEN)
+
         try:
             serializer = self.serializer_class(data=request.data)
-
             if not serializer.is_valid():
-                return Response(
-                    {"status": "error", "errors": serializer.errors},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-
+                return Response({"status": "error", "errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
             serializer.save()
-
-            return Response(
-                {"status": "success", "data": serializer.data},
-                status=status.HTTP_201_CREATED,
-            )
-
+            return Response({"status": "success", "data": serializer.data}, status=status.HTTP_201_CREATED)
         except Exception as e:
-            return Response(
-                {"status": "error", "detail": str(e)},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
+            return Response({"status": "error", "detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class ServiceSpecDetail(APIView):
     model_class = ServiceSpecification
     serializer_class = ServiceSpecSerializer
+
+    permission_classes = [AllowAny]
 
     @swagger_auto_schema(
         operation_summary="Получить характеристику по ID",
@@ -265,27 +251,19 @@ class ServiceSpecDetail(APIView):
         tags=["spec/{id}/"],
     )
     def patch(self, request, pk, format=None):
+        user = request.user
+        if not (is_moderator(user) or is_superuser(user)):
+            return Response({"detail": "Permission denied"}, status=status.HTTP_403_FORBIDDEN)
+
         try:
             spec = get_object_or_404(self.model_class, pk=pk)
             serializer = self.serializer_class(spec, data=request.data, partial=True)
-
             if not serializer.is_valid():
-                return Response(
-                    {"status": "error", "errors": serializer.errors},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-
+                return Response({"status": "error", "errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
             serializer.save()
-            return Response(
-                {"status": "success", "data": serializer.data},
-                status=status.HTTP_200_OK,
-            )
-
-        except Exception as e:
-            return Response(
-                {"status": "error", "detail": "Internal server error"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
+            return Response({"status": "success", "data": serializer.data}, status=status.HTTP_200_OK)
+        except Exception:
+            return Response({"status": "error", "detail": "Internal server error"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     @swagger_auto_schema(
         operation_summary="Удалить характеристику по ID",
@@ -293,25 +271,23 @@ class ServiceSpecDetail(APIView):
         tags=["spec/{id}/"],
     )
     def delete(self, request, pk, format=None):
+        user = request.user
+        if not (is_moderator(user) or is_superuser(user)):
+            return Response({"detail": "Permission denied"}, status=status.HTTP_403_FORBIDDEN)
+
         try:
             spec = get_object_or_404(self.model_class, pk=pk)
             spec.delete()
-
             return Response(status=status.HTTP_204_NO_CONTENT)
-
         except Exception as e:
-            return Response(
-                {
-                    "status": "error",
-                    "detail": f"Failed to delete specification: {str(e)}",
-                },
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
+            return Response({"status": "error", "detail": f"Failed to delete specification: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class ApplicationList(APIView):
     model_class = Application
     serializer_class = ApplicationSerializer
+
+    permission_classes = [IsAuthenticated]
 
     @swagger_auto_schema(
         operation_summary="Получить список всех заявок",
@@ -327,32 +303,32 @@ class ApplicationList(APIView):
         tags=["applic/"],
     )
     def get(self, request, format=None):
+        user = request.user
         try:
-            applications = self.model_class.objects.exclude(
-                Q(status__name="draft") | Q(status__name="deleted")
-            ).select_related("status")
+            if is_moderator(user) or is_superuser(user):
+                applications = self.model_class.objects.exclude(
+                    Q(status__name="draft") | Q(status__name="deleted")
+                ).select_related("status")
+            else:
+                applications = self.model_class.objects.filter(
+                    user_creator=user
+                ).exclude(Q(status__name="draft") | Q(status__name="deleted")).select_related("status")
 
             status_name = request.query_params.get("status")
             if status_name:
                 applications = applications.filter(status__name=status_name)
 
             serializer = self.serializer_class(applications, many=True)
-
-            return Response(
-                {"status": "success", "data": serializer.data},
-                status=status.HTTP_200_OK,
-            )
-
+            return Response({"status": "success", "data": serializer.data}, status=status.HTTP_200_OK)
         except Exception as e:
-            return Response(
-                {"status": "error", "detail": str(e)},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
+            return Response({"status": "error", "detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class ApplicationDetail(APIView):
     model_class = Application
     serializer_class = ApplicationSerializer
+
+    permission_classes = [IsAuthenticated]
 
     @swagger_auto_schema(
         operation_summary="Получить одну заявку по ID",
@@ -360,18 +336,17 @@ class ApplicationDetail(APIView):
         tags=["applic/{id}/"],
     )
     def get(self, request, pk, format=None):
+        user = request.user
         try:
             application = get_object_or_404(self.model_class, pk=pk)
+
+            if not (is_moderator(user) or is_superuser(user) or application.user_creator == user):
+                return Response({"detail": "Permission denied"}, status=status.HTTP_403_FORBIDDEN)
+
             serializer = self.serializer_class(application)
-            return Response(
-                {"status": "success", "data": serializer.data},
-                status=status.HTTP_200_OK,
-            )
+            return Response({"status": "success", "data": serializer.data}, status=status.HTTP_200_OK)
         except Exception as e:
-            return Response(
-                {"status": "error", "detail": str(e)},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
+            return Response({"status": "error", "detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     @swagger_auto_schema(
         operation_summary="Установить для заявки статус 'formed(сформирована)'",
@@ -379,30 +354,28 @@ class ApplicationDetail(APIView):
         tags=["applic/{id}/"],
     )
     def put(self, request, pk, format=None):
+        user = request.user
         try:
-            application = get_object_or_404(
-                self.model_class.objects.select_related("status"), pk=pk
-            )
+            application = get_object_or_404(self.model_class.objects.select_related("status"), pk=pk)
+
+            if not (is_moderator(user) or is_superuser(user) or application.user_creator == user):
+                return Response({"detail": "Permission denied"}, status=status.HTTP_403_FORBIDDEN)
 
             if application.status_id == 2:
-                return Response(
-                    {"detail": "The application already has the status of 'Formed'"},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
+                return Response({"detail": "The application already has the status of 'Formed'"}, status=status.HTTP_400_BAD_REQUEST)
 
             formed_status = get_object_or_404(ApplicationStatus, pk=2)
             application.status = formed_status
             application.save()
 
             serializer = self.serializer_class(application)
-            return Response(
-                {
-                    "status": "success",
-                    "data": serializer.data,
-                    "detail": "The application status has been successfully changed to 'Formed'",
-                },
-                status=status.HTTP_200_OK,
-            )
+            return Response({
+                "status": "success",
+                "data": serializer.data,
+                "detail": "The application status has been successfully changed to 'Formed'"
+            }, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"status": "error", "detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         except Exception as e:
             return Response(
@@ -416,45 +389,41 @@ class ApplicationDetail(APIView):
         tags=["applic/{id}/"],
     )
     def delete(self, request, pk, format=None):
+        user = request.user
         try:
-            application = get_object_or_404(
-                self.model_class.objects.select_related("status"), pk=pk
-            )
+            application = get_object_or_404(self.model_class.objects.select_related("status"), pk=pk)
+
+            if not (is_moderator(user) or is_superuser(user) or application.user_creator == user):
+                return Response({"detail": "Permission denied"}, status=status.HTTP_403_FORBIDDEN)
 
             if application.status_id == 5:
-                return Response(
-                    {"detail": "The application has already been marked as deleted"},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
+                return Response({"detail": "The application has already been marked as deleted"}, status=status.HTTP_400_BAD_REQUEST)
 
             deleted_status = get_object_or_404(ApplicationStatus, pk=5)
             application.status = deleted_status
             application.save()
 
             serializer = self.serializer_class(application)
-            return Response(
-                {
-                    "status": "success",
-                    "data": serializer.data,
-                    "detail": "The application has been successfully marked as deleted",
-                },
-                status=status.HTTP_200_OK,
-            )
-
+            return Response({
+                "status": "success",
+                "data": serializer.data,
+                "detail": "The application has been successfully marked as deleted"
+            }, status=status.HTTP_200_OK)
         except Exception as e:
-            return Response(
-                {"status": "error", "detail": str(e)},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
+            return Response({"status": "error", "detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 
 class RemoveServiceFromApplicationView(APIView):
+    permission_classes = [IsAuthenticated]
+
     @swagger_auto_schema(
         operation_summary="Удаление сервиса по ID из заявки",
         responses={204: "No Content"},
         tags=["applic/{applic_id}/service/{service_id}"],
     )
     def delete(self, request, applic_id, service_id, format=None):
+        user = request.user
         try:
             app_service = get_object_or_404(
                 ApplicationService.objects.select_related("application", "service"),
@@ -462,27 +431,23 @@ class RemoveServiceFromApplicationView(APIView):
                 service_id=service_id,
             )
 
+            if not (is_moderator(user) or is_superuser(user) or app_service.application.user_creator == user):
+                return Response({"detail": "Permission denied"}, status=status.HTTP_403_FORBIDDEN)
+
             app_service.delete()
-
-            return Response(
-                {
-                    "status": "success",
-                    "detail": "The service was successfully removed from the application.",
-                },
-                status=status.HTTP_204_NO_CONTENT,
-            )
-
+            return Response({"status": "success", "detail": "The service was successfully removed from the application."}, status=status.HTTP_204_NO_CONTENT)
         except Exception as e:
-            return Response(
-                {"status": "error", "detail": str(e)},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
+            return Response({"status": "error", "detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class RegisterView(APIView):
+    permission_classes = [AllowAny]
+
     @swagger_auto_schema(
+        operation_summary="Регистрация нового пользователя",
         request_body=RegisterSerializer,
-        responses={201: "User created and logged in", 400: "Invalid data"},
+        responses={201: RegisterSerializer},
+        tags=["auth/"],
     )
     def post(self, request):
         serializer = RegisterSerializer(data=request.data)
@@ -502,18 +467,31 @@ class RegisterView(APIView):
 class LoginView(APIView):
     permission_classes = [AllowAny]
 
-    @swagger_auto_schema(request_body=LoginSerializer)
+    @swagger_auto_schema(
+        operation_summary="Авторизация пользователя",
+        request_body=LoginSerializer,
+        responses={201: LoginSerializer},
+        tags=["auth/"],
+    )
     def post(self, request):
         serializer = LoginSerializer(data=request.data)
         if serializer.is_valid():
-            user = serializer.validated_data['user']
+            user = serializer.validated_data["user"]
             login(request, user)
             return Response({"status": "success", "message": "Вход выполнен"})
-        return Response({"status": "error", "errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
-
+        return Response(
+            {"status": "error", "errors": serializer.errors},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
 
 class LogoutView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @swagger_auto_schema(
+        operation_summary="Выход из аккаунта пользователя",
+        tags=["auth/"],
+    )
     def post(self, request):
         logout(request)
         return Response(
