@@ -4,7 +4,6 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.permissions import AllowAny
 
-
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from django.contrib.auth.models import User
@@ -701,3 +700,68 @@ class DraftApplicationServiceView(APIView):
         return Response(
             {"status": "success", "data": serializer.data}, status=status.HTTP_200_OK
         )
+
+
+class ModeratorChangeStatusView(APIView):
+    permission_classes = [IsAuthenticated]
+    model_class = Application
+    serializer_class = ApplicationSerializer
+
+    @swagger_auto_schema(
+        operation_summary="Модератор меняет статус заявки на accepted/completed/rejected",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            required=["status_id"],
+            properties={
+                "status_id": openapi.Schema(
+                    type=openapi.TYPE_INTEGER, description="ID статуса: 3,4 или 6"
+                ),
+            },
+        ),
+        responses={200: ApplicationSerializer},
+        tags=["applic/{id}/moderator_status/"],
+    )
+    def put(self, request, pk, format=None):
+        user = request.user
+
+        if not (is_moderator(user) or is_superuser(user)):
+            return Response(
+                {"detail": "Permission denied"}, status=status.HTTP_403_FORBIDDEN
+            )
+
+        status_id = request.data.get("status_id")
+        if status_id not in [3, 4, 6]:
+            return Response(
+                {"detail": "Invalid status_id, allowed: 3,4,6"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            application = get_object_or_404(self.model_class, pk=pk)
+            new_status = get_object_or_404(ApplicationStatus, pk=status_id)
+
+            if application.status_id == status_id:
+                return Response(
+                    {"detail": "Application already has this status"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            application.status = new_status
+            application.user_moderator = user
+            application.save()
+
+            serializer = self.serializer_class(application)
+            return Response(
+                {
+                    "status": "success",
+                    "data": serializer.data,
+                    "detail": f"Application status changed to '{new_status.name}' by moderator.",
+                },
+                status=status.HTTP_200_OK,
+            )
+
+        except Exception as e:
+            return Response(
+                {"status": "error", "detail": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )

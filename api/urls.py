@@ -22,6 +22,11 @@ urlpatterns = [
         views.RemoveServiceFromApplicationView.as_view(),
         name="remove-service-from-applic",
     ),
+    path(
+        "applications/<int:pk>/moderator_status/",
+        views.ModeratorChangeStatusView.as_view(),
+        name="moderator-change-status",
+    ),
     path("auth/register/", views.RegisterView.as_view(), name="register"),
     path("auth/login/", views.LoginView.as_view(), name="login"),
     path("auth/logout/", views.LogoutView.as_view(), name="logout"),
