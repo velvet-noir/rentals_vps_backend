@@ -25,6 +25,9 @@ urlpatterns = [
     path("auth/register/", views.RegisterView.as_view(), name="register"),
     path("auth/login/", views.LoginView.as_view(), name="login"),
     path("auth/logout/", views.LogoutView.as_view(), name="logout"),
-    path('applic/draft/', views.DraftApplicationServiceView.as_view(), name='draft-application-service-add'),
-
+    path(
+        "applic/draft/",
+        views.DraftApplicationServiceView.as_view(),
+        name="draft-application-service-add",
+    ),
 ]
