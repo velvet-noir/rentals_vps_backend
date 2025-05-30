@@ -498,3 +498,45 @@ class LogoutView(APIView):
             {"status": "success", "message": "Выход выполнен"},
             status=status.HTTP_200_OK,
         )
+
+
+class DraftApplicationServiceView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @swagger_auto_schema(
+        operation_summary="Добавить сервис в черновик заявки (создаст заявку, если её нет)",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            required=['service_id'],
+            properties={
+                'service_id': openapi.Schema(type=openapi.TYPE_INTEGER),
+            },
+        ),
+        responses={200: ApplicationSerializer},
+        tags=["applic/draft"],
+    )
+    def post(self, request):
+        user = request.user
+        service_id = request.data.get("service_id")
+
+        if not service_id:
+            return Response({"detail": "service_id is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            service = Service.objects.get(pk=service_id)
+        except Service.DoesNotExist:
+            return Response({"detail": "Service not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        draft_status = ApplicationStatus.objects.get(name="draft")
+        application, created = Application.objects.get_or_create(
+            user_creator=user,
+            status=draft_status
+        )
+
+        if ApplicationService.objects.filter(application=application, service=service).exists():
+            return Response({"detail": "Service already added"}, status=status.HTTP_400_BAD_REQUEST)
+
+        ApplicationService.objects.create(application=application, service=service)
+
+        serializer = ApplicationSerializer(application)
+        return Response({"status": "success", "data": serializer.data}, status=status.HTTP_200_OK)
