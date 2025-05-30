@@ -1,9 +1,15 @@
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny
+
+
 
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
+from django.contrib.auth.models import User
+from django.contrib.auth import authenticate, login, logout
 
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
@@ -17,21 +23,12 @@ from api.models import (
 )
 from api.serializers import (
     ApplicationSerializer,
+    LoginSerializer,
+    RegisterSerializer,
     ServiceDetailSerializer,
     ServiceSerializer,
     ServiceSpecSerializer,
 )
-
-# @swagger_auto_schema(
-#     manual_parameters=None,  # Список openapi.Parameter для описания query/path/header/cookie
-#     operation_id=None,  # Идентификатор операции (для генерации кода)
-#     operation_description=None,  # Полное описание операции
-#     deprecated=None,  # Отметка, что эндпоинт устарел
-#     security=None,  # Настройка безопасности (например, JWT)
-#     tags=None,  # Список тегов (разделы в Swagger UI)
-#     responses=None,  # Словарь с кодами ответов и их описаниями/сериализаторами
-#     examples=None,  # Примеры запросов/ответов
-# )
 
 
 class ServiceList(APIView):
@@ -480,3 +477,46 @@ class RemoveServiceFromApplicationView(APIView):
                 {"status": "error", "detail": str(e)},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
+
+
+class RegisterView(APIView):
+    @swagger_auto_schema(
+        request_body=RegisterSerializer,
+        responses={201: "User created and logged in", 400: "Invalid data"},
+    )
+    def post(self, request):
+        serializer = RegisterSerializer(data=request.data)
+        if serializer.is_valid():
+            user = serializer.save()
+            login(request, user)
+            return Response(
+                {"status": "success", "message": "User created and logged in."},
+                status=status.HTTP_201_CREATED,
+            )
+        return Response(
+            {"status": "error", "errors": serializer.errors},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+
+class LoginView(APIView):
+    permission_classes = [AllowAny]
+
+    @swagger_auto_schema(request_body=LoginSerializer)
+    def post(self, request):
+        serializer = LoginSerializer(data=request.data)
+        if serializer.is_valid():
+            user = serializer.validated_data['user']
+            login(request, user)
+            return Response({"status": "success", "message": "Вход выполнен"})
+        return Response({"status": "error", "errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+class LogoutView(APIView):
+    def post(self, request):
+        logout(request)
+        return Response(
+            {"status": "success", "message": "Выход выполнен"},
+            status=status.HTTP_200_OK,
+        )

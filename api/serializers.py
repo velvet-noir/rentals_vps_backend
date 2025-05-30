@@ -6,6 +6,8 @@ from .models import (
     Service,
     ServiceSpecification,
 )
+from django.contrib.auth.models import User
+from django.contrib.auth import authenticate
 
 
 class ServiceSerializer(serializers.ModelSerializer):
@@ -67,3 +69,39 @@ class ApplicationServiceSerializer(serializers.ModelSerializer):
     class Meta:
         model = ApplicationService
         fields = "__all__"
+
+
+class RegisterSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ("username", "email", "password")
+
+    def validate_username(self, value):
+        if User.objects.filter(username=value).exists():
+            raise serializers.ValidationError("User with this username already exists.")
+        return value
+
+    def validate_email(self, value):
+        if User.objects.filter(email=value).exists():
+            raise serializers.ValidationError("User with this email already exists.")
+        return value
+
+    def create(self, validated_data):
+        user = User.objects.create_user(
+            username=validated_data["username"],
+            email=validated_data["email"],
+            password=validated_data["password"],
+        )
+        return user
+
+
+class LoginSerializer(serializers.Serializer):
+    username = serializers.CharField()
+    password = serializers.CharField()
+
+    def validate(self, data):
+        user = authenticate(username=data["username"], password=data["password"])
+        if user and user.is_active:
+            data["user"] = user
+            return data
+        raise serializers.ValidationError("Неверные данные для входа")
