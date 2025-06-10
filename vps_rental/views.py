@@ -329,7 +329,9 @@ class ApplicationDeleteServer(APIView):
             # application = Application.objects.filter(
             #     user_creator=request.user, status=ApplicationStatus.DRAFT
             # ).first()
-            application = Application.objects.filter(status=ApplicationStatus.DRAFT).first()
+            application = Application.objects.filter(
+                status=ApplicationStatus.DRAFT
+            ).first()
 
             if not application:
                 return Response(

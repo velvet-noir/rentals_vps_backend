@@ -43,7 +43,16 @@ INSTALLED_APPS = [
     "vps_rental",
     "rest_framework",
     "drf_yasg",
+    "django_minio_backend",
 ]
+
+MINIO_ENDPOINT = config("MINIO_ENDPOINT")
+MINIO_ACCESS_KEY = config("MINIO_ROOT_USER")
+MINIO_SECRET_KEY = config("MINIO_ROOT_PASSWORD")
+MINIO_USE_HTTPS = False
+
+MINIO_PUBLIC_BUCKETS = ["mybucket"]
+MINIO_STORAGE_AUTO_CREATE_MEDIA_BUCKET = True
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -134,3 +143,4 @@ STATICFILES_DIRS = [
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
