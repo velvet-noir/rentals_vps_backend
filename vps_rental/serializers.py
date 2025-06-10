@@ -1,16 +1,23 @@
 from rest_framework import serializers
-from .models import Application, Service, ServiceSpecification
+from .models import Application, Service
 
 
 class ServiceSerializer(serializers.ModelSerializer):
     class Meta:
         model = Service
-        fields = "__all__"
+        fields = [
+            "id",
+            "name",
+            "image",
+            "mini_description",
+            "price",
+            "is_active",
+        ]
 
 
-class ServiceSpecSerializer(serializers.ModelSerializer):
+class ServiceDetailSerializer(serializers.ModelSerializer):
     class Meta:
-        model = ServiceSpecification
+        model = Service
         fields = "__all__"
 
 

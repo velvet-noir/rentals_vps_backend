@@ -1,20 +1,10 @@
 from django.contrib import admin
-from .models import Application, Service, ServiceSpecification, ApplicationService
+from .models import Application, Service, ApplicationService
 
 
 class ServiceAdmin(admin.ModelAdmin):
     list_display = ("name", "image", "price", "is_active")
     ordering = ("id",)
-
-
-class ServiceSpecificationAdmin(admin.ModelAdmin):
-    list_display = ("get_service_name", "processor", "ram", "disk", "internet_speed")
-    ordering = ("id",)
-
-    def get_service_name(self, obj):
-        return f"Характеристика: {obj.service.name}"
-
-    get_service_name.short_description = "Service"
 
 
 class ApplicationAdmin(admin.ModelAdmin):
@@ -42,6 +32,5 @@ class ApplicationServiceAdmin(admin.ModelAdmin):
 
 
 admin.site.register(Service, ServiceAdmin)
-admin.site.register(ServiceSpecification, ServiceSpecificationAdmin)
 admin.site.register(Application, ApplicationAdmin)
 admin.site.register(ApplicationService, ApplicationServiceAdmin)

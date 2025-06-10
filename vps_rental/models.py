@@ -8,6 +8,11 @@ class Service(models.Model):
     mini_description = models.TextField()
     price = models.DecimalField(max_digits=10, decimal_places=2)
     is_active = models.BooleanField(default=True)
+    description = models.TextField()
+    processor = models.CharField(max_length=100)
+    ram = models.CharField(max_length=100)
+    disk = models.CharField(max_length=100)
+    internet_speed = models.CharField(max_length=100)
 
     def __str__(self):
         return self.name
@@ -18,23 +23,23 @@ class Service(models.Model):
         verbose_name_plural = "Услуги"
 
 
-class ServiceSpecification(models.Model):
-    service = models.ForeignKey(
-        Service, on_delete=models.CASCADE, related_name="specifications"
-    )
-    description = models.TextField()
-    processor = models.CharField(max_length=100)
-    ram = models.CharField(max_length=100)
-    disk = models.CharField(max_length=100)
-    internet_speed = models.CharField(max_length=100)
+# class ServiceSpecification(models.Model):
+#     service = models.ForeignKey(
+#         Service, on_delete=models.CASCADE, related_name="specifications"
+#     )
+#     description = models.TextField()
+#     processor = models.CharField(max_length=100)
+#     ram = models.CharField(max_length=100)
+#     disk = models.CharField(max_length=100)
+#     internet_speed = models.CharField(max_length=100)
 
-    def __str__(self):
-        return self.service.name
+#     def __str__(self):
+#         return self.service.name
 
-    class Meta:
-        ordering = ["id"]
-        verbose_name = "Характеристика услуги"
-        verbose_name_plural = "Характеристики услуг"
+#     class Meta:
+#         ordering = ["id"]
+#         verbose_name = "Характеристика услуги"
+#         verbose_name_plural = "Характеристики услуг"
 
 
 class ApplicationStatus(models.TextChoices):
