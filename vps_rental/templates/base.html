@@ -2,10 +2,10 @@
 <html lang="en" class="h-100">
 <head>
   <meta charset="utf-8">
-    <title>ZGU</title>
+    <title>{% block title %}{% endblock %}</title>
 </head>
 <body>
     Hello ZGU students!
-    Today is {{ current_date }}
+    {% block content %}{% endblock %}
 </body>
 </html>
