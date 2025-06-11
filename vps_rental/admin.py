@@ -1,5 +1,6 @@
 from django.contrib import admin
-from .models import Application, Service, ApplicationService
+
+from .models import Application, ApplicationService, Service
 
 
 class ServiceAdmin(admin.ModelAdmin):

@@ -1,4 +1,5 @@
 from django.urls import path
+
 from vps_rental import views
 
 urlpatterns = [
@@ -19,4 +20,8 @@ urlpatterns = [
         views.ApplicationDeleteServer.as_view(),
         name="remove-service-from-applic",
     ),
+    path("register/", views.RegisterView.as_view(), name="register"),
+    path("login/", views.LoginView.as_view(), name="login"),
+    path("logout/", views.LogoutView.as_view(), name="logout"),
+    path("user/", views.UserView.as_view(), name="user"),
 ]

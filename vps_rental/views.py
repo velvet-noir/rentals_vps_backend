@@ -1,15 +1,23 @@
+from django.contrib.auth import authenticate, login, logout
+from django.db.models import Q
 from django.shortcuts import get_object_or_404
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_exempt
+from drf_yasg import openapi
+from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from django.db.models import Q
-from drf_yasg.utils import swagger_auto_schema
-from drf_yasg import openapi
+
 from .models import Application, ApplicationService, ApplicationStatus, Service
 from .serializers import (
     ApplicationSerializer,
+    LoginSerializer,
+    RegisterSerializer,
     ServiceDetailSerializer,
     ServiceSerializer,
+    UserSerializer,
 )
 
 
@@ -18,7 +26,7 @@ class ServiceList(APIView):
     serializer_class = ServiceSerializer
 
     @swagger_auto_schema(
-        operation_summary="Получить список всех серверов",
+        operation_summary="Получить список всех услуг",
         responses={200: ServiceSerializer(many=True)},
         manual_parameters=[
             openapi.Parameter(
@@ -55,7 +63,7 @@ class ServiceAdd(APIView):
     serializer_class = ServiceDetailSerializer
 
     @swagger_auto_schema(
-        operation_summary="Создать новый сервер",
+        operation_summary="Создать новую услугу",
         request_body=ServiceDetailSerializer,
         responses={201: ServiceDetailSerializer},
         tags=["services"],
@@ -370,3 +378,70 @@ class ApplicationDeleteServer(APIView):
                 {"status": "error", "detail": str(e)},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
+
+
+class UserView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @swagger_auto_schema(
+        operation_summary="Информация о пользователе",
+        responses={201: UserSerializer},
+        tags=["user"],
+    )
+    def get(self, request):
+        serializer = UserSerializer(request.user)
+        return Response(serializer.data)
+
+
+class RegisterView(APIView):
+    @swagger_auto_schema(
+        operation_summary="Регистрация пользователя",
+        request_body=RegisterSerializer,
+        responses={201: RegisterSerializer},
+        tags=["user"],
+    )
+    def post(self, request):
+        serializer = RegisterSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(
+                {"status": "success", "message": "Пользователь зарегистрирован"},
+                status=status.HTTP_201_CREATED,
+            )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@method_decorator(csrf_exempt, name="dispatch")
+class LoginView(APIView):
+    @swagger_auto_schema(
+        operation_summary="Авторизация пользователя",
+        request_body=LoginSerializer,
+        responses={201: LoginSerializer},
+        tags=["user"],
+    )
+    def post(self, request):
+        serializer = LoginSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        user = authenticate(
+            request,
+            username=serializer.validated_data["username"],
+            password=serializer.validated_data["password"],
+        )
+
+        if user is not None:
+            login(request, user)
+            return Response({"message": "Вход выполнен"})
+        else:
+            return Response({"error": "Неверные данные"}, status=400)
+
+
+@method_decorator(csrf_exempt, name="dispatch")
+class LogoutView(APIView):
+    @swagger_auto_schema(
+        operation_summary="Выход пользователя",
+        tags=["user"],
+    )
+    def post(self, request):
+        logout(request)
+        return Response({"message": "Выход выполнен"}, status=status.HTTP_200_OK)
