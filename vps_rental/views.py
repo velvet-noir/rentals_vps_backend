@@ -6,24 +6,21 @@ from django.views.decorators.csrf import csrf_exempt
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .models import Application, ApplicationService, ApplicationStatus, Service
-from .serializers import (
-    ApplicationSerializer,
-    LoginSerializer,
-    RegisterSerializer,
-    ServiceDetailSerializer,
-    ServiceSerializer,
-    UserSerializer,
-)
+from .serializers import (ApplicationSerializer, LoginSerializer,
+                          RegisterSerializer, ServiceDetailSerializer,
+                          ServiceSerializer, UserSerializer)
 
 
 class ServiceList(APIView):
     model_class = Service
     serializer_class = ServiceSerializer
+
+    permission_classes = [AllowAny]
 
     @swagger_auto_schema(
         operation_summary="Получить список всех услуг",
@@ -62,6 +59,8 @@ class ServiceAdd(APIView):
     model_class = Service
     serializer_class = ServiceDetailSerializer
 
+    permission_classes = [IsAdminUser]
+
     @swagger_auto_schema(
         operation_summary="Создать новую услугу",
         request_body=ServiceDetailSerializer,
@@ -91,6 +90,12 @@ class ServiceAdd(APIView):
 class ServiceDetail(APIView):
     model_class = Service
     serializer_class = ServiceDetailSerializer
+
+    def get_permissions(self):
+        if self.request.method == "GET":
+            return [AllowAny()]
+        else:
+            return [IsAdminUser()]
 
     @swagger_auto_schema(
         operation_summary="Получить один сервис по ID с характеристиками",
@@ -165,6 +170,8 @@ class ApplicationList(APIView):
     model_class = Application
     serializer_class = ApplicationSerializer
 
+    permission_classes = [IsAuthenticated]
+
     @swagger_auto_schema(
         operation_summary="Получить список всех заявок",
         manual_parameters=[
@@ -183,6 +190,9 @@ class ApplicationList(APIView):
             applications = self.model_class.objects.exclude(
                 status__in=[ApplicationStatus.DRAFT, ApplicationStatus.DELETED]
             )
+
+            if not request.user.is_staff:
+                applications = applications.filter(user_creator=request.user)
 
             status_name = request.query_params.get("status")
             if status_name:
@@ -298,6 +308,8 @@ class ApplicationFormed(APIView):
     model_class = Application
     serializer_class = ApplicationSerializer
 
+    permission_classes = [IsAuthenticated]
+
     @swagger_auto_schema(
         operation_summary="Установить для заявки статус 'formed(сформирована)'",
         responses={200: ApplicationSerializer},
@@ -306,6 +318,12 @@ class ApplicationFormed(APIView):
     def put(self, request, pk, format=None):
         try:
             application = get_object_or_404(self.model_class, pk=pk)
+
+            if application.user_creator != request.user:
+                return Response(
+                    {"status": "error", "detail": "Нет доступа к этой заявке"},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
 
             application.status = ApplicationStatus.FORMED
             application.save()
@@ -327,18 +345,17 @@ class ApplicationFormed(APIView):
 
 
 class ApplicationDeleteServer(APIView):
+    permission_classes = [IsAuthenticated]
+
     @swagger_auto_schema(
-        operation_summary="Удаление сервера по ID из черновой заявки пользователя",
+        operation_summary="Удаление сервиса по ID из черновой заявки пользователя",
         responses={204: "No Content"},
         tags=["application/delete-service"],
     )
     def delete(self, request, service_id, format=None):
         try:
-            # application = Application.objects.filter(
-            #     user_creator=request.user, status=ApplicationStatus.DRAFT
-            # ).first()
             application = Application.objects.filter(
-                status=ApplicationStatus.DRAFT
+                user_creator=request.user, status=ApplicationStatus.DRAFT
             ).first()
 
             if not application:
@@ -360,7 +377,7 @@ class ApplicationDeleteServer(APIView):
                 return Response(
                     {
                         "status": "error",
-                        "detail": "Удаление сервера возможно только для заявок со статусом DRAFT.",
+                        "detail": "Удаление сервиса возможно только для заявок со статусом DRAFT.",
                     },
                     status=status.HTTP_400_BAD_REQUEST,
                 )
@@ -369,7 +386,7 @@ class ApplicationDeleteServer(APIView):
             return Response(
                 {
                     "status": "success",
-                    "detail": "Сервер успешно удалён из черновой заявки.",
+                    "detail": "Сервис успешно удалён из черновой заявки.",
                 },
                 status=status.HTTP_200_OK,
             )
@@ -394,6 +411,8 @@ class UserView(APIView):
 
 
 class RegisterView(APIView):
+    permission_classes = [AllowAny]
+
     @swagger_auto_schema(
         operation_summary="Регистрация пользователя",
         request_body=RegisterSerializer,
@@ -413,6 +432,8 @@ class RegisterView(APIView):
 
 @method_decorator(csrf_exempt, name="dispatch")
 class LoginView(APIView):
+    permission_classes = [AllowAny]
+
     @swagger_auto_schema(
         operation_summary="Авторизация пользователя",
         request_body=LoginSerializer,
@@ -438,6 +459,8 @@ class LoginView(APIView):
 
 @method_decorator(csrf_exempt, name="dispatch")
 class LogoutView(APIView):
+    permission_classes = [IsAuthenticated]
+
     @swagger_auto_schema(
         operation_summary="Выход пользователя",
         tags=["user"],

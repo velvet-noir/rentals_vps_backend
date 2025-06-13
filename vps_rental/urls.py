@@ -11,7 +11,7 @@ urlpatterns = [
         r"app/<int:pk>/", views.ApplicationDetail.as_view(), name="application-detail"
     ),
     path(
-        "app/<int:pk>/formed/",
+        r"app/<int:pk>/formed/",
         views.ApplicationFormed.as_view(),
         name="application-formed",
     ),
@@ -20,8 +20,8 @@ urlpatterns = [
         views.ApplicationDeleteServer.as_view(),
         name="remove-service-from-applic",
     ),
-    path("register/", views.RegisterView.as_view(), name="register"),
-    path("login/", views.LoginView.as_view(), name="login"),
-    path("logout/", views.LogoutView.as_view(), name="logout"),
-    path("user/", views.UserView.as_view(), name="user"),
+    path(r"register/", views.RegisterView.as_view(), name="register"),
+    path(r"login/", views.LoginView.as_view(), name="login"),
+    path(r"logout/", views.LogoutView.as_view(), name="logout"),
+    path(r"user/", views.UserView.as_view(), name="user"),
 ]
