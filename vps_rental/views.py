@@ -214,6 +214,8 @@ class ApplicationDetail(APIView):
     model_class = Application
     serializer_class = ApplicationSerializer
 
+    permission_classes = [IsAdminUser]
+
     @swagger_auto_schema(
         operation_summary="Получить одну заявку по ID",
         responses={200: ApplicationSerializer},
@@ -468,3 +470,82 @@ class LogoutView(APIView):
     def post(self, request):
         logout(request)
         return Response({"message": "Выход выполнен"}, status=status.HTTP_200_OK)
+
+
+class DraftApplicationServiceView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @swagger_auto_schema(
+        operation_summary="Добавить услугу в черновик заявки (создаст заявку, если её нет)",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            required=["service_id"],
+            properties={
+                "service_id": openapi.Schema(type=openapi.TYPE_INTEGER),
+            },
+        ),
+        responses={200: ApplicationSerializer},
+        tags=["application/draft"],
+    )
+    def post(self, request):
+        user = request.user
+        service_id = request.data.get("service_id")
+
+        if not service_id:
+            return Response(
+                {"detail": "service_id is required"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            service = Service.objects.get(pk=service_id, is_active=True)
+        except Service.DoesNotExist:
+            return Response(
+                {"detail": "Услуга не найдена или неактивна"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        application, _ = Application.objects.get_or_create(
+            user_creator=user,
+            status=ApplicationStatus.DRAFT,
+        )
+
+        if ApplicationService.objects.filter(
+            application=application, service=service
+        ).exists():
+            return Response(
+                {"detail": "Услуга уже добавлена в черновик"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        ApplicationService.objects.create(application=application, service=service)
+
+        serializer = ApplicationSerializer(application)
+        return Response(
+            {"status": "success", "data": serializer.data},
+            status=status.HTTP_200_OK,
+        )
+
+    @swagger_auto_schema(
+        operation_summary="Получить черновую заявку текущего пользователя, если есть",
+        responses={200: ApplicationSerializer},
+        tags=["application/draft"],
+    )
+    def get(self, request):
+        user = request.user
+
+        application = Application.objects.filter(
+            user_creator=user, status=ApplicationStatus.DRAFT
+        ).first()
+
+        if not application:
+            return Response(
+                {"detail": "Черновая заявка не найдена"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        serializer = ApplicationSerializer(application)
+        return Response(
+            {"status": "success", "data": serializer.data},
+            status=status.HTTP_200_OK,
+        )
