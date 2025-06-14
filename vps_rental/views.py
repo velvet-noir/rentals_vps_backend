@@ -1,3 +1,4 @@
+from datetime import datetime
 from django.contrib.auth import authenticate, login, logout
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
@@ -9,11 +10,18 @@ from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from django.core.cache import cache
+from .utils import redis_client
 
 from .models import Application, ApplicationService, ApplicationStatus, Service
-from .serializers import (ApplicationSerializer, LoginSerializer,
-                          RegisterSerializer, ServiceDetailSerializer,
-                          ServiceSerializer, UserSerializer)
+from .serializers import (
+    ApplicationSerializer,
+    LoginSerializer,
+    RegisterSerializer,
+    ServiceDetailSerializer,
+    ServiceSerializer,
+    UserSerializer,
+)
 
 
 class ServiceList(APIView):
@@ -454,6 +462,14 @@ class LoginView(APIView):
 
         if user is not None:
             login(request, user)
+
+            timestamp = datetime.now().isoformat()
+
+            log_key = "auth:logins"
+            log_entry = f'{user.username} logged in at {timestamp}'
+            redis_client.lpush(log_key, log_entry)
+            redis_client.ltrim(log_key, 0, 99)
+
             return Response({"message": "Вход выполнен"})
         else:
             return Response({"error": "Неверные данные"}, status=400)

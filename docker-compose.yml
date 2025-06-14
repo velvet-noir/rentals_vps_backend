@@ -24,8 +24,18 @@ services:
     volumes:
       - minio_data:/data
 
+  redis:
+    image: redis:7
+    container_name: rentals_vps_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
 volumes:
   pg_data:
     name: rentals_vps_pg_data
   minio_data:
     name: rentals_vps_minio_data
+  redis_data:
+    name: rentals_vps_redis_data

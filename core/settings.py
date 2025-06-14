@@ -54,6 +54,9 @@ MINIO_USE_HTTPS = False
 MINIO_PUBLIC_BUCKETS = ["mybucket"]
 MINIO_STORAGE_AUTO_CREATE_MEDIA_BUCKET = True
 
+REDIS_HOST = "127.0.0.1"
+REDIS_PORT = 6379
+
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework.authentication.SessionAuthentication",
