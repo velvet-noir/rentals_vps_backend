@@ -6,7 +6,10 @@ from django_minio_backend import MinioBackend
 class Service(models.Model):
     name = models.CharField(max_length=100)
     image = models.FileField(
-        verbose_name="Object Upload", storage=MinioBackend(bucket_name="mybucket")
+        verbose_name="Object Upload",
+        storage=MinioBackend(bucket_name="mybucket"),
+        blank=True,
+        null=True,
     )
     mini_description = models.TextField()
     price = models.DecimalField(max_digits=10, decimal_places=2)

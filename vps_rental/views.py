@@ -1,5 +1,7 @@
 from datetime import datetime
+
 from django.contrib.auth import authenticate, login, logout
+from django.core.cache import cache
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from django.utils.decorators import method_decorator
@@ -10,18 +12,12 @@ from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from django.core.cache import cache
-from .utils import redis_client
 
 from .models import Application, ApplicationService, ApplicationStatus, Service
-from .serializers import (
-    ApplicationSerializer,
-    LoginSerializer,
-    RegisterSerializer,
-    ServiceDetailSerializer,
-    ServiceSerializer,
-    UserSerializer,
-)
+from .serializers import (ApplicationSerializer, LoginSerializer,
+                          RegisterSerializer, ServiceDetailSerializer,
+                          ServiceSerializer, UserSerializer)
+from .utils import redis_client
 
 
 class ServiceList(APIView):
@@ -269,6 +265,7 @@ class ApplicationDetail(APIView):
                 )
 
             application.status = new_status
+            application.user_moderator = request.user
             application.save()
 
             serializer = self.serializer_class(application)
@@ -466,7 +463,7 @@ class LoginView(APIView):
             timestamp = datetime.now().isoformat()
 
             log_key = "auth:logins"
-            log_entry = f'{user.username} logged in at {timestamp}'
+            log_entry = f"{user.username} logged in at {timestamp}"
             redis_client.lpush(log_key, log_entry)
             redis_client.ltrim(log_key, 0, 99)
 
