@@ -12,6 +12,7 @@ from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.parsers import MultiPartParser, FormParser
 
 from .models import Application, ApplicationService, ApplicationStatus, Service
 from .serializers import (ApplicationSerializer, LoginSerializer,
@@ -59,17 +60,20 @@ class ServiceList(APIView):
             )
 
 
+from rest_framework.parsers import MultiPartParser, FormParser
+
 class ServiceAdd(APIView):
     model_class = Service
     serializer_class = ServiceDetailSerializer
-
     permission_classes = [IsAdminUser]
+    parser_classes = (MultiPartParser, FormParser)
 
     @swagger_auto_schema(
         operation_summary="Создать новую услугу",
         request_body=ServiceDetailSerializer,
         responses={201: ServiceDetailSerializer},
         tags=["services"],
+        consumes=["multipart/form-data"],
     )
     def post(self, request, format=None):
         try:
@@ -89,6 +93,7 @@ class ServiceAdd(APIView):
                 {"status": "error", "message": str(e)},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
+
 
 
 class ServiceDetail(APIView):
