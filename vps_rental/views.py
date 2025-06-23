@@ -9,10 +9,10 @@ from django.views.decorators.csrf import csrf_exempt
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status
+from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.parsers import MultiPartParser, FormParser
 
 from .models import Application, ApplicationService, ApplicationStatus, Service
 from .serializers import (ApplicationSerializer, LoginSerializer,
@@ -60,8 +60,6 @@ class ServiceList(APIView):
             )
 
 
-from rest_framework.parsers import MultiPartParser, FormParser
-
 class ServiceAdd(APIView):
     model_class = Service
     serializer_class = ServiceDetailSerializer
@@ -93,7 +91,6 @@ class ServiceAdd(APIView):
                 {"status": "error", "message": str(e)},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
-
 
 
 class ServiceDetail(APIView):
